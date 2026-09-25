@@ -1,16 +1,16 @@
 import os
 import cv2
 import numpy as np
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, StreamingResponse
+import time
+from fastapi import FastAPI, Response
+from fastapi.responses import HTMLResponse
 from inspector import GearInspector
 
 app = FastAPI(title="Industrial Gear Inspection Terminal")
-
 inspector = GearInspector()
 
 def get_fallback_frame():
-    """Generates a synthetic gear frame in memory if local dataset is missing on serverless deploys."""
+    """Generates a synthetic gear frame in memory if dataset is missing."""
     frame = np.zeros((720, 1280, 3), dtype=np.uint8)
     cv2.circle(frame, (640, 360), 200, (200, 200, 200), -1)
     for i in range(18):
@@ -20,7 +20,7 @@ def get_fallback_frame():
         cv2.circle(frame, (cx, cy), 25, (200, 200, 200), -1)
     return frame
 
-def generate_frames():
+def get_single_frame():
     dataset_dir = "dataset"
     images = []
     
@@ -31,25 +31,19 @@ def generate_frames():
             if f.endswith((".png", ".jpg"))
         ]
 
-    idx = 0
-    while True:
-        if images:
-            raw_frame = cv2.imread(images[idx % len(images)])
-            idx += 1
-        else:
-            raw_frame = get_fallback_frame()
+    if images:
+        # Cycle through dataset images based on current timestamp
+        idx = int(time.time() * 2) % len(images)
+        raw_frame = cv2.imread(images[idx])
+    else:
+        raw_frame = get_fallback_frame()
 
-        if raw_frame is None:
-            raw_frame = get_fallback_frame()
+    if raw_frame is None:
+        raw_frame = get_fallback_frame()
 
-        hud_frame, _ = inspector.process_frame(raw_frame)
-        _, buffer = cv2.imencode(".jpg", hud_frame)
-        frame_bytes = buffer.tobytes()
-
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
-        )
+    hud_frame, _ = inspector.process_frame(raw_frame)
+    _, buffer = cv2.imencode(".jpg", hud_frame)
+    return buffer.tobytes()
 
 @app.get("/", response_class=HTMLResponse)
 def index():
@@ -60,24 +54,31 @@ def index():
         <title>Industrial Gear Inspection Terminal</title>
         <style>
             body { background-color: #0d1117; color: #58a6ff; font-family: monospace; text-align: center; margin: 0; padding: 20px; }
-            h1 { color: #58a6ff; }
+            h1 { color: #58a6ff; margin-bottom: 5px; }
+            p { color: #8b949e; margin-bottom: 20px; }
             img { border: 2px solid #30363d; border-radius: 8px; max-width: 95%; height: auto; }
         </style>
     </head>
     <body>
         <h1>⚙️ Industrial Gear Inspection System (AOI)</h1>
         <p>Live Telemetry & SCADA Stream Endpoint</p>
-        <img src="/video_feed" alt="Live Inspection HUD Stream" />
+        <img id="stream" src="/snapshot" alt="Live Inspection HUD Stream" />
+
+        <script>
+            // Refresh frame every 200ms to simulate live video on serverless
+            const img = document.getElementById('stream');
+            setInterval(() => {
+                img.src = '/snapshot?t=' + new Date().getTime();
+            }, 200);
+        </script>
     </body>
     </html>
     """
 
-@app.get("/video_feed")
-def video_feed():
-    return StreamingResponse(
-        generate_frames(),
-        media_type="multipart/x-mixed-replace; boundary=frame"
-    )
+@app.get("/snapshot")
+def snapshot():
+    frame_bytes = get_single_frame()
+    return Response(content=frame_bytes, media_type="image/jpeg")
 
 @app.get("/metrics")
 def get_metrics():
