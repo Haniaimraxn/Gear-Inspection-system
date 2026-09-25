@@ -9,39 +9,49 @@ from inspector import GearInspector
 app = FastAPI(title="Industrial Gear Inspection Terminal")
 inspector = GearInspector()
 
-def get_fallback_frame():
-    """Generates a synthetic gear frame in memory if dataset is missing."""
-    frame = np.zeros((720, 1280, 3), dtype=np.uint8)
-    cv2.circle(frame, (640, 360), 200, (200, 200, 200), -1)
-    for i in range(18):
-        angle = i * (2 * np.pi / 18)
-        cx = int(640 + 220 * np.cos(angle))
-        cy = int(360 + 220 * np.sin(angle))
-        cv2.circle(frame, (cx, cy), 25, (200, 200, 200), -1)
-    return frame
+def generate_synthetic_gear():
+    """Renders a valid 18-tooth gear shape in memory for serverless deploys."""
+    img = np.zeros((720, 1280, 3), dtype=np.uint8)
+    center = (640, 360)
+    num_teeth = 18
+    r_outer = 220
+    r_inner = 170
+    
+    pts = []
+    for i in range(num_teeth * 2):
+        angle = i * (2 * np.pi / (num_teeth * 2))
+        r = r_outer if i % 2 == 0 else r_inner
+        x = int(center[0] + r * np.cos(angle))
+        y = int(center[1] + r * np.sin(angle))
+        pts.append([x, y])
+        
+    pts = np.array(pts, np.int32).reshape((-1, 1, 2))
+    cv2.fillPoly(img, [pts], (180, 180, 180))
+    cv2.circle(img, center, 70, (0, 0, 0), -1)  # Center bore
+    return img
 
 def get_single_frame():
     dataset_dir = "dataset"
-    images = []
-    
+    raw_frame = None
+
     if os.path.exists(dataset_dir):
         images = [
             os.path.join(dataset_dir, f)
             for f in os.listdir(dataset_dir)
             if f.endswith((".png", ".jpg"))
         ]
-
-    if images:
-        # Cycle through dataset images based on current timestamp
-        idx = int(time.time() * 2) % len(images)
-        raw_frame = cv2.imread(images[idx])
-    else:
-        raw_frame = get_fallback_frame()
+        if images:
+            idx = int(time.time() * 2) % len(images)
+            raw_frame = cv2.imread(images[idx])
 
     if raw_frame is None:
-        raw_frame = get_fallback_frame()
+        raw_frame = generate_synthetic_gear()
 
-    hud_frame, _ = inspector.process_frame(raw_frame)
+    try:
+        hud_frame, _ = inspector.process_frame(raw_frame)
+    except Exception:
+        hud_frame = raw_frame
+
     _, buffer = cv2.imencode(".jpg", hud_frame)
     return buffer.tobytes()
 
@@ -65,11 +75,10 @@ def index():
         <img id="stream" src="/snapshot" alt="Live Inspection HUD Stream" />
 
         <script>
-            // Refresh frame every 200ms to simulate live video on serverless
             const img = document.getElementById('stream');
             setInterval(() => {
                 img.src = '/snapshot?t=' + new Date().getTime();
-            }, 200);
+            }, 300);
         </script>
     </body>
     </html>
