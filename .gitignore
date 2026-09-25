@@ -9,12 +9,6 @@ venv/
 ENV/
 env/
 
-# Datasets & Temp Renderings
-dataset/
-*.png
-*.jpg
-*.jpeg
-
 # IDE & OS files
 .vscode/
 .idea/
