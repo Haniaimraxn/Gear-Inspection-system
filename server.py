@@ -1,79 +1,84 @@
-import time
+import os
 import cv2
 import numpy as np
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
-from generate_dataset import render_industrial_gear
+from fastapi.responses import HTMLResponse, StreamingResponse
 from inspector import GearInspector
 
-app = FastAPI(title="Industrial Automated Inspection System", version="2.0.0")
+app = FastAPI(title="Industrial Gear Inspection Terminal")
+
 inspector = GearInspector()
 
-def generate_mjpeg_stream():
-    angle = 0
-    toggle_counter = 0
-    has_defect = False
-    prev_time = time.time()
+def get_fallback_frame():
+    """Generates a synthetic gear frame in memory if local dataset is missing on serverless deploys."""
+    frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+    cv2.circle(frame, (640, 360), 200, (200, 200, 200), -1)
+    for i in range(18):
+        angle = i * (2 * np.pi / 18)
+        cx = int(640 + 220 * np.cos(angle))
+        cy = int(360 + 220 * np.sin(angle))
+        cv2.circle(frame, (cx, cy), 25, (200, 200, 200), -1)
+    return frame
+
+def generate_frames():
+    dataset_dir = "dataset"
+    images = []
     
+    if os.path.exists(dataset_dir):
+        images = [
+            os.path.join(dataset_dir, f)
+            for f in os.listdir(dataset_dir)
+            if f.endswith((".png", ".jpg"))
+        ]
+
+    idx = 0
     while True:
-        curr_time = time.time()
-        elapsed = curr_time - prev_time
-        prev_time = curr_time
-        fps = 1.0 / elapsed if elapsed > 0 else 25.0
-        latency_ms = elapsed * 1000.0
+        if images:
+            raw_frame = cv2.imread(images[idx % len(images)])
+            idx += 1
+        else:
+            raw_frame = get_fallback_frame()
 
-        toggle_counter += 1
-        if toggle_counter >= 200:
-            has_defect = not has_defect
-            toggle_counter = 0
+        if raw_frame is None:
+            raw_frame = get_fallback_frame()
 
-        frame = render_industrial_gear(angle_deg=angle, has_defect=has_defect)
-        dashboard, _ = inspector.inspect(frame, fps=fps, latency_ms=latency_ms)
+        hud_frame, _ = inspector.process_frame(raw_frame)
+        _, buffer = cv2.imencode(".jpg", hud_frame)
+        frame_bytes = buffer.tobytes()
 
-        _, encoded_img = cv2.imencode('.jpg', dashboard)
-        frame_bytes = encoded_img.tobytes()
-
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-
-        angle = (angle + 1) % 360
-        time.sleep(0.03)
+        yield (
+            b"--frame\r\n"
+            b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+        )
 
 @app.get("/", response_class=HTMLResponse)
-def live_terminal():
+def index():
     return """
     <!DOCTYPE html>
-    <html lang="en">
+    <html>
     <head>
-        <meta charset="UTF-8">
-        <title>Industrial Automated Inspection Terminal</title>
+        <title>Industrial Gear Inspection Terminal</title>
         <style>
-            body { background-color: #0a0e14; color: #00e5ff; font-family: monospace; text-align: center; margin: 0; padding: 20px; }
-            h1 { color: #ffb700; margin-bottom: 5px; }
-            p { color: #a0a0a0; margin-top: 0; }
-            .container { display: inline-block; border: 2px solid #00e5ff; border-radius: 6px; box-shadow: 0 0 20px rgba(0, 229, 255, 0.25); padding: 10px; background: #10141b; }
-            img { display: block; max-width: 100%; height: auto; }
+            body { background-color: #0d1117; color: #58a6ff; font-family: monospace; text-align: center; margin: 0; padding: 20px; }
+            h1 { color: #58a6ff; }
+            img { border: 2px solid #30363d; border-radius: 8px; max-width: 95%; height: auto; }
         </style>
     </head>
     <body>
-        <h1>INDUSTRIAL AUTOMATED INSPECTION HUD</h1>
-        <p>Live Web Telemetry, CAD Topology & AI Decision Gate Feed</p>
-        <div class="container">
-            <img src="/video_feed" alt="Live Inspection Stream" />
-        </div>
+        <h1>⚙️ Industrial Gear Inspection System (AOI)</h1>
+        <p>Live Telemetry & SCADA Stream Endpoint</p>
+        <img src="/video_feed" alt="Live Inspection HUD Stream" />
     </body>
     </html>
     """
 
 @app.get("/video_feed")
 def video_feed():
-    return StreamingResponse(generate_mjpeg_stream(), media_type="multipart/x-mixed-replace;boundary=frame")
+    return StreamingResponse(
+        generate_frames(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
 
 @app.get("/metrics")
-def get_inspection_metrics():
-    return JSONResponse({
-        "total_inspected": inspector.total_count,
-        "passed_parts": inspector.pass_count,
-        "rejected_parts": inspector.fail_count,
-        "yield_rate_percent": round((inspector.pass_count / inspector.total_count * 100.0), 2) if inspector.total_count > 0 else 100.0
-    })
+def get_metrics():
+    return inspector.get_telemetry()
