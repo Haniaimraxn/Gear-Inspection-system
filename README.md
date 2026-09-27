@@ -1,7 +1,7 @@
-⚙️ Industrial Automated Gear Inspection Workstation 🔍
+## ⚙️ Industrial Automated Gear Inspection Workstation 🔍
 An edge-compatible Automated Optical Inspection (AOI) system engineered for real-time, non-destructive quality control (NDT) of mechanical transmission components. The platform provides a 3-panel Heads-Up Display (HUD) that handles concurrent photon capture, dynamic topological vector rendering, and real-time structural defect isolation. 🛠️
 
-📊 Technical Overview & Capabilities
+## 📊 Technical Overview & Capabilities
 The system executes a real-time Input-Process-Output (IPO) spatial analysis pipeline, built to replace manual visual inspection on high-speed automated assembly lines:
 
 📸 Panel 1 — Optical Sensor Feed (Input): Ingests raw monochromatic video streams, tracks frame rates (∼25 FPS) and loop latency (≈4.0ms), applies spatial center reticle crosshairs, and projects optical tracking bounding brackets.
@@ -40,7 +40,7 @@ Designed specifically for Sub-Millimeter Quality Assurance Automation:
 
 🌐 Flexible Deployment: Operates as a local desktop GUI (OpenCV viewport) or streams over the web via FastAPI for integration into centralized SCADA and Industrial IoT (IIoT) dashboards.
 
-🚀 Setup & Execution
+## 🚀 Setup & Execution
 1. Install Dependencies 📦
 Bash
 pip install -r requirements.txt
