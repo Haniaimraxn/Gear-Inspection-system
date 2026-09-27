@@ -9,8 +9,32 @@ from inspector import GearInspector
 app = FastAPI(title="Industrial Gear Inspection Terminal")
 inspector = GearInspector()
 
+def generate_cad_gear_frame():
+    """Generates a bright synthetic gear image so the screen is never black."""
+    img = np.zeros((720, 640, 3), dtype=np.uint8)
+    center = (320, 360)
+    num_teeth = 18
+    r_outer = 210
+    r_inner = 150
+    
+    pts = []
+    for i in range(num_teeth * 2):
+        angle = i * (np.pi / num_teeth)
+        r = r_outer if i % 2 == 0 else r_inner
+        x = int(center[0] + r * np.cos(angle))
+        y = int(center[1] + r * np.sin(angle))
+        pts.append([x, y])
+        
+    pts = np.array(pts, np.int32).reshape((-1, 1, 2))
+    cv2.fillPoly(img, [pts], (220, 220, 220))
+    cv2.circle(img, center, r_inner - 20, (160, 160, 160), -1)
+    cv2.circle(img, center, 60, (10, 10, 10), -1)
+    return img
+
 def get_hud_frame():
-    dataset_dir = "dataset"
+    # Resolve absolute directory path for Vercel serverless runtime
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    dataset_dir = os.path.join(base_dir, "dataset")
     raw_frame = None
 
     if os.path.exists(dataset_dir):
@@ -20,15 +44,13 @@ def get_hud_frame():
             if f.lower().endswith((".png", ".jpg", ".jpeg"))
         ])
         if images:
-            # Cycle through dataset frames smoothly based on timestamp
             idx = int(time.time() * 1.5) % len(images)
             raw_frame = cv2.imread(images[idx])
 
-    # Fallback if dataset folder is empty
+    # If dataset image fails to load, use synthetic CAD gear
     if raw_frame is None:
-        raw_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+        raw_frame = generate_cad_gear_frame()
 
-    # Process frame through 3-panel HUD inspector pipeline
     try:
         hud_frame, _ = inspector.process_frame(raw_frame)
     except Exception:
@@ -51,7 +73,7 @@ def index():
             body { 
                 background-color: #05070a; 
                 color: #58a6ff; 
-                font-family: 'Segoe UI', Tahoma, monospace; 
+                font-family: monospace; 
                 display: flex;
                 flex-direction: column;
                 align-items: center;
