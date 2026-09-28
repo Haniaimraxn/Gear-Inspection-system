@@ -1,34 +1,53 @@
-⚙️ Industrial Automated Gear Inspection Workstation 🔍
-An edge-compatible Automated Optical Inspection (AOI) system engineered for real-time, non-destructive quality control (NDT) of mechanical transmission components. The platform provides a 3-panel Heads-Up Display (HUD) that handles concurrent photon capture, dynamic topological vector rendering, and real-time structural defect isolation. 🛠️
+# ⚙️ Industrial Automated Gear Inspection Workstation 🔍
 
-📊 Technical Overview & Capabilities
-The system executes a real-time Input-Process-Output (IPO) spatial analysis pipeline, built to replace manual visual inspection on high-speed automated assembly lines:
+An edge-compatible **Automated Optical Inspection (AOI)** platform engineered for real-time, non-destructive quality control (**NDT**) of high-precision mechanical transmission components. The system features a **3-panel Heads-Up Display (HUD)** designed to handle concurrent photon capture, dynamic topological vector rendering, and real-time structural defect isolation on fast-moving assembly lines.
 
-* ** 📸 Panel 1 — Optical Sensor Feed (Input): Ingests raw monochromatic video streams, tracks frame rates (∼25 FPS) and loop latency (≈4.0ms), applies spatial center reticle crosshairs, and projects optical tracking bounding brackets.
-* **📐 Panel 2 — CAD Vector Topology (Process): Performs contour extraction and polar coordinate mapping. It constructs a shaded ±0.50mm tolerance band, projects a 360∘ polar scale at 30∘ increments, maps radial pitch vector spokes, and dynamically indexes intact tooth centroids (T1…T 18).
-* 🤖 Panel 3 — AI Decision Gate (Output): Evaluates structural integrity against nominal CAD specifications, calculates real-time factory yield metrics (Pass / Fail / Yield %), isolates tooth fractures via automated angle-gap clustering, and highlights spatial anomalies with targeted bounding overlays.
+---
+
+## 🛠️ System Architecture & Capabilities
+
+The workstation runs a low-latency **Input-Process-Output (IPO)** spatial analysis pipeline, serving as a high-speed computer vision alternative to manual inspection:
+
+### 📸 Panel 1 — Optical Sensor Feed (Input)
+* **Raw Stream Ingestion:** Captures monochromatic video streams at standard frame rates (~25 FPS) with minimal loop latency (≈4.0ms).
+* **Spatial Target Alignment:** Overlays a spatial center reticle crosshair to maintain consistent physical gear centering.
+* **Dynamic Bounding:** Projects real-time optical tracking brackets around detected gear geometries.
+
+### 📐 Panel 2 — CAD Vector Topology (Processing)
+* **Contour Extraction:** Performs edge detection and extracts vector contours for precise polar coordinate mapping.
+* **Tolerance Mapping:** Constructs a shaded **±0.50mm nominal tolerance band** overlaid on the gear silhouette.
+* **Polar Scale Projection:** Renders a **360° polar reference ring** indexed at **30° increments**.
+* **Feature Indexing:** Maps radial pitch vector spokes and dynamically identifies intact tooth centroids ($T_1 \dots T_{18}$).
+
+### 🤖 Panel 3 — AI Decision Gate (Output)
+* **Quality Assurance Validation:** Evaluates structural geometry directly against factory **nominal CAD specifications**.
+* **Live Telemetry Tracking:** Computes real-time production yield stats (**Pass Count / Fail Count / Yield %**).
+* **Anomaly Detection:** Isolates missing or damaged teeth via **angle-gap spatial clustering**.
+* **Visual Defect Marking:** Instantly highlights surface micro-fractures and structural deviations using targeted bounding overlays.
 
 ---
 
 ## 💻 Core Technology Stack
 
-* **🐍 Language: Python 3.10+
-* **👁️ Computer Vision: OpenCV (cv2) — Spatial geometry transformation, contour hierarchy extraction, Gaussian smoothing, and dynamic distance transform rendering.
-* **🔢 Matrix Computation: NumPy — Vectorized coordinate transforms, polar angle matrix sorting, Euclidean radius mapping, and spatial array clustering.
-* **⚡ Web Engine & Microservice: FastAPI & Uvicorn — Low-latency ASGI server providing asynchronous HTTP endpoints for remote telemetry monitoring.
-* **📡 Streaming Protocol: Motion JPEG (MJPEG) — Lightweight byte streaming over dedicated web endpoints (/video_feed).
+* **Python 3.10+:** Core runtime environment for system logic and data transformation.
+* **OpenCV (`cv2`):** Handles image processing, dynamic spatial transformations, contour hierarchies, Gaussian blur filters, and distance transform algorithms.
+* **NumPy:** Powers vector coordinate math, polar angle matrix operations, Euclidean distance mapping, and spatial array indexing.
+* **FastAPI & Uvicorn:** High-performance asynchronous ASGI Web Framework enabling real-time remote telemetry microservices.
+* **MJPEG Streaming:** Delivers video frames via lightweight byte streams across dedicated HTTP endpoints (`/video_feed`).
 
 ---
 
 ## 🏭 Engineering Focus & Industrial Scope
 
-Designed specifically for Sub-Millimeter Quality Assurance Automation:
+* **Deterministic Edge Analytics:** Relies on deterministic mathematical and geometric algorithms rather than heavy deep-learning neural models. This keeps frame latency below 5ms for integration with high-speed manufacturing lines.
+* **ISO Standard Metric Translation:** Converts raw pixel data into physical units (**Pitch Diameter: 268.0mm**, **Outer Diameter: 300.0mm**) for immediate validation against strict engineering tolerances.
+* **Flexible Production Deployment:** Functions as a standalone desktop application (OpenCV GUI) or streams telemetry across the network to centralized **SCADA** and **Industrial IoT (IIoT)** dashboards.
 
-1. **⚡Deterministic Edge Processing: Uses algorithmic spatial analysis instead of heavy neural network models, keeping frame processing latency under 5ms for seamless integration with high-speed conveyors.
-2. ** 📏CAD Telemetry Alignment: Translates raw pixel data into normalized engineering metrics (Pitch Diameter: 268.0mm, Outer Diameter: 300.0mm) to validate manufacturing tolerances directly against ISO standards.
-3. ** 🌐Flexible Deployment: Operates as a local desktop GUI (OpenCV viewport) or streams over the web via FastAPI for integration into centralized SCADA and Industrial IoT (IIoT) dashboards.
+---
 
-🚀 Setup & Execution
-1. Install Dependencies 📦
-Bash
-pip install -r requirements.txt
+## 🚀 Quickstart & Setup
+
+1. **Clone the Repository:**
+   ```bash
+   git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
+   cd your-repo-name
